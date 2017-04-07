@@ -11,9 +11,7 @@ namespace ArangoDbTests
     public class NodeLinkRepository
     {
         private static readonly string DatabaseName = "NodeLinks";
-        private static readonly string NodesCollectionName = "Node";
-        private static readonly string UsersCollectionName = "User";
-        private static readonly string LinksCollectionName = "Link";
+
         public NodeLinkRepository()
         {
             ArangoDatabase.ChangeSetting(s =>
@@ -30,10 +28,10 @@ namespace ArangoDbTests
             using (var db = ArangoDatabase.CreateWithSetting())
             {
                 db.CreateDatabase(DatabaseName);
-          
-                db.CreateCollection(NodesCollectionName);
-                db.CreateCollection(UsersCollectionName);
-                db.CreateCollection(LinksCollectionName, type:CollectionType.Edge);
+
+                db.CreateCollection(typeof(Node).Name);
+                db.CreateCollection(typeof(User).Name);
+                db.CreateCollection(typeof(Link).Name, type: CollectionType.Edge);
             }
         }
 
