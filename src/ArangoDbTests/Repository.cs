@@ -13,6 +13,7 @@ namespace ArangoDbTests
     {
         private static readonly string DatabaseName = "NodeLinks";
         private static readonly int BatchSise = 100;
+        private readonly IEnumerable<Type> _assignableTypes;
 
         public Repository()
         {
@@ -23,6 +24,8 @@ namespace ArangoDbTests
                 s.Credential = new NetworkCredential("root", "root");
                 s.SystemDatabaseCredential = new NetworkCredential("root", "root");
             });
+            var type = typeof(ILinkableObject);
+            _assignableTypes = Assembly.GetEntryAssembly().GetExportedTypes().Where(x => x.GetTypeInfo().GetInterfaces().Contains(type));
         }
 
         public void CreateDb()
@@ -31,9 +34,7 @@ namespace ArangoDbTests
             {
                 db.CreateDatabase(DatabaseName);
 
-                var type = typeof(ILinkableObject);
-                var assignableTypes = Assembly.GetEntryAssembly().GetExportedTypes().Where(x => x.GetTypeInfo().GetInterfaces().Contains(type));
-                foreach (Type implementation in assignableTypes)
+                foreach (Type implementation in _assignableTypes)
                 {
                     db.CreateCollection(implementation.Name);
                 }
@@ -50,11 +51,11 @@ namespace ArangoDbTests
             }
         }
 
-        public void InsertDocuments<T>(List<T> documents)
+        public void InsertDocuments(IEnumerable<T> documents)
         {
             using (var db = ArangoDatabase.CreateWithSetting())
             {
-                db.Collection<T>().InsertMultiple(documents);
+                db.Collection<T>().InsertMultiple(documents.ToList());
             }
         }
 
@@ -94,8 +95,8 @@ namespace ArangoDbTests
             {
                 EdgeDefinitionTypedData data = new EdgeDefinitionTypedData
                 {
-                    From = new List<Type> { typeof(User), typeof(Node) },
-                    To = new List<Type> { typeof(Node), typeof(User) },
+                    From = _assignableTypes.ToList(),
+                    To = _assignableTypes.ToList(),
                     Collection = typeof(Link)
                 };
 
