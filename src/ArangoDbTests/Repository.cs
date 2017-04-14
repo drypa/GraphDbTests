@@ -2,18 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using ArangoDbTests.Models;
 using ArangoDB.Client;
 using ArangoDB.Client.Data;
 
 namespace ArangoDbTests
 {
-    public class NodeLinkRepository
+    public class Repository<T> where T: ILinkableObject
     {
         private static readonly string DatabaseName = "NodeLinks";
         private static readonly int BatchSise = 100;
 
-        public NodeLinkRepository()
+        public Repository()
         {
             ArangoDatabase.ChangeSetting(s =>
             {
@@ -30,41 +31,30 @@ namespace ArangoDbTests
             {
                 db.CreateDatabase(DatabaseName);
 
-                db.CreateCollection(typeof(Node).Name);
-                db.CreateCollection(typeof(User).Name);
+                var type = typeof(ILinkableObject);
+                var assignableTypes = Assembly.GetEntryAssembly().GetExportedTypes().Where(x => x.GetTypeInfo().GetInterfaces().Contains(type));
+                foreach (Type implementation in assignableTypes)
+                {
+                    db.CreateCollection(implementation.Name);
+                }
+               
                 db.CreateCollection(typeof(Link).Name, type: CollectionType.Edge);
             }
         }
 
-        public void InsertNode(Node node)
+        public void InsertDocument(T document)
         {
             using (var db = ArangoDatabase.CreateWithSetting())
             {
-                db.Collection<Node>().Insert(node);
+                db.Collection<T>().Insert(document);
             }
         }
 
-        public void InsertNodes(List<Node> nodes)
+        public void InsertDocuments<T>(List<T> documents)
         {
             using (var db = ArangoDatabase.CreateWithSetting())
             {
-                db.Collection<Node>().InsertMultiple(nodes);
-            }
-        }
-
-        public void InsertUser(User user)
-        {
-            using (var db = ArangoDatabase.CreateWithSetting())
-            {
-                db.Collection<User>().Insert(user);
-            }
-        }
-
-        public void InsertUsers(List<User> users)
-        {
-            using (var db = ArangoDatabase.CreateWithSetting())
-            {
-                db.Collection<User>().InsertMultiple(users);
+                db.Collection<T>().InsertMultiple(documents);
             }
         }
 

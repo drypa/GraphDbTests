@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ArangoDbTests.Models;
+using NodeLinkRepository = ArangoDbTests.Repository<ArangoDbTests.Models.ILinkableObject>;
 
 namespace ArangoDbTests
 {
@@ -49,7 +50,8 @@ namespace ArangoDbTests
 
                     userNodeLinks.Add(userNodeLink);
                 }
-                repository.InsertNodes(nodes);
+                repository.InsertDocuments(users);
+                repository.InsertDocuments(nodes);
                 repository.InsertLinks(userNodeLinks);
 
                 foreach (var node in nodes)
