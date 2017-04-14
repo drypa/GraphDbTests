@@ -11,6 +11,7 @@ namespace ArangoDbTests
     public class NodeLinkRepository
     {
         private static readonly string DatabaseName = "NodeLinks";
+        private static readonly int BatchSise = 100;
 
         public NodeLinkRepository()
         {
@@ -67,6 +68,14 @@ namespace ArangoDbTests
             }
         }
 
+        public List<User> GetAllUsers()
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                return db.Collection<User>().All().ToList();
+            }
+        }
+
         public void InsertLink(Link link)
         {
             using (var db = ArangoDatabase.CreateWithSetting())
@@ -79,7 +88,13 @@ namespace ArangoDbTests
         {
             using (var db = ArangoDatabase.CreateWithSetting())
             {
-                db.Collection<Link>().InsertMultiple(links.ToList());
+                var linksList = links.ToList();
+                for (var i = 0; i < linksList.Count; i += BatchSise)
+                {
+                    var batch = linksList.Skip(i).Take(BatchSise).ToList();
+                    db.Collection<Link>().InsertMultiple(batch);
+                }
+                
             }
         }
 

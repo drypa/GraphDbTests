@@ -6,17 +6,30 @@ namespace ArangoDbTests
 {
     public class Program
     {
+        private static readonly int usersCount = 10;
+        private static readonly int eachUserNodesCount = 10;
+
         public static void Main(string[] args)
         {
-            var usersCount = 10;
-            var eachUserNodesCount = 10;
-
-            var users = new List<User>(usersCount);
-
             var repository = new NodeLinkRepository();
             repository.CreateDb();
 
+            CreateUsersWithNodes(repository);
 
+            var users = repository.GetAllUsers();
+
+            foreach (var user in users)
+            {
+                var usersLink = CreateLink(user, users);
+                repository.InsertLinks(usersLink);
+            }
+
+            repository.CreateGraph("first_graph");
+        }
+
+        private static void CreateUsersWithNodes(NodeLinkRepository repository)
+        {
+            var users = new List<User>(usersCount);
             var userNodeLinks = new List<Link>(usersCount * eachUserNodesCount);
 
             for (var i = 0; i < usersCount; i++)
@@ -28,7 +41,7 @@ namespace ArangoDbTests
 
                 for (var j = 0; j < eachUserNodesCount; j++)
                 {
-                    string nodeName = $"node_{i}_{j}";
+                    var nodeName = $"node_{i}_{j}";
                     var node = Node.Create(nodeName);
                     nodes.Add(node);
 
@@ -37,6 +50,7 @@ namespace ArangoDbTests
                     userNodeLinks.Add(userNodeLink);
                 }
                 repository.InsertNodes(nodes);
+                repository.InsertLinks(userNodeLinks);
 
                 foreach (var node in nodes)
                 {
@@ -44,18 +58,6 @@ namespace ArangoDbTests
                     repository.InsertLinks(nodeLinks);
                 }
             }
-
-            repository.InsertUsers(users);
-            repository.InsertLinks(userNodeLinks);
-
-
-            foreach (var user in users)
-            {
-                var usersLink = CreateLink(user, users);
-                repository.InsertLinks(usersLink);
-            }
-
-            repository.CreateGraph("first_graph");
         }
 
         private static IEnumerable<Link> CreateLink(ILinkableObject first,
