@@ -1,8 +1,10 @@
 ﻿using System;
+using ArangoDbTests.Models.Attributes;
 using ArangoDB.Client;
 
 namespace ArangoDbTests.Models
 {
+    [Edge]
     public class Link
     {
         [DocumentProperty(Identifier = IdentifierType.Key)]

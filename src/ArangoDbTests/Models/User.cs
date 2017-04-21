@@ -1,9 +1,10 @@
-﻿using System;
+﻿using ArangoDbTests.Models.Attributes;
 using ArangoDB.Client;
 
 namespace ArangoDbTests.Models
 {
-    public class User: ILinkableObject
+    [VertexAttriute]
+    public class User : ILinkableObject
     {
         [DocumentProperty(Identifier = IdentifierType.Key)]
         public string Id { get; set; }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using ArangoDbTests.Models;
-using NodeLinkRepository = ArangoDbTests.Repository<ArangoDbTests.Models.ILinkableObject>;
 
 namespace ArangoDbTests
 {
@@ -12,8 +11,8 @@ namespace ArangoDbTests
 
         public static void Main(string[] args)
         {
-            var repository = new NodeLinkRepository();
-            repository.CreateDb();
+            var repository = new Repository();
+            repository.ReCreateDb();
 
             CreateUsersWithNodes(repository);
 
@@ -28,18 +27,16 @@ namespace ArangoDbTests
             repository.CreateGraph("first_graph");
         }
 
-        private static void CreateUsersWithNodes(NodeLinkRepository repository)
+        private static void CreateUsersWithNodes(Repository repository)
         {
-            var users = new List<User>(usersCount);
             var userNodeLinks = new List<Link>(usersCount * eachUserNodesCount);
 
             for (var i = 0; i < usersCount; i++)
             {
                 var userName = "user" + i;
-                var user = User.Create(userName);
-                users.Add(user);
+                User user = User.Create(userName);
                 var nodes = new List<Node>(eachUserNodesCount);
-
+                repository.InsertUser(user);
                 for (var j = 0; j < eachUserNodesCount; j++)
                 {
                     var nodeName = $"node_{i}_{j}";
@@ -50,8 +47,8 @@ namespace ArangoDbTests
 
                     userNodeLinks.Add(userNodeLink);
                 }
-                repository.InsertDocuments(users);
-                repository.InsertDocuments(nodes);
+                
+                repository.InsertNodes(nodes);
                 repository.InsertLinks(userNodeLinks);
 
                 foreach (var node in nodes)

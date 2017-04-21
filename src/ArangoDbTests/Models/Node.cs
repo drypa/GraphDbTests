@@ -1,7 +1,9 @@
-﻿using ArangoDB.Client;
+﻿using ArangoDbTests.Models.Attributes;
+using ArangoDB.Client;
 
 namespace ArangoDbTests.Models
 {
+    [VertexAttriute]
     public class Node: ILinkableObject
     {
         [DocumentProperty(Identifier = IdentifierType.Key)]

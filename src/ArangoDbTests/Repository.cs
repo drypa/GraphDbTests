@@ -4,16 +4,18 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using ArangoDbTests.Models;
+using ArangoDbTests.Models.Attributes;
 using ArangoDB.Client;
 using ArangoDB.Client.Data;
 
 namespace ArangoDbTests
 {
-    public class Repository<T> where T: ILinkableObject
+    public class Repository
     {
         private static readonly string DatabaseName = "NodeLinks";
         private static readonly int BatchSise = 100;
-        private readonly IEnumerable<Type> _assignableTypes;
+        private readonly List<Type> _edgeTypes;
+        private readonly List<Type> _vertexTypes;
 
         public Repository()
         {
@@ -24,8 +26,37 @@ namespace ArangoDbTests
                 s.Credential = new NetworkCredential("root", "root");
                 s.SystemDatabaseCredential = new NetworkCredential("root", "root");
             });
-            var type = typeof(ILinkableObject);
-            _assignableTypes = Assembly.GetEntryAssembly().GetExportedTypes().Where(x => x.GetTypeInfo().GetInterfaces().Contains(type));
+
+            _vertexTypes = Assembly
+                .GetEntryAssembly()
+                .GetExportedTypes()
+                .Where(x => x.GetTypeInfo().GetCustomAttributes<VertexAttriute>(false).Any())
+                .ToList();
+            _edgeTypes = Assembly
+                .GetEntryAssembly()
+                .GetExportedTypes()
+                .Where(x => x.GetTypeInfo().GetCustomAttributes<EdgeAttribute>(false).Any())
+                .ToList();
+        }
+
+        public void ReCreateDb()
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                if (db.ListDatabases().Contains(DatabaseName))
+                    db.DropDatabase(DatabaseName);
+                db.CreateDatabase(DatabaseName);
+
+                RegisterTypes(db);
+            }
+        }
+
+        private void RegisterTypes(IArangoDatabase db)
+        {
+            foreach (var implementation in _vertexTypes)
+                db.CreateCollection(implementation.Name);
+
+            db.CreateCollection(typeof(Link).Name, type: CollectionType.Edge);
         }
 
         public void CreateDb()
@@ -34,28 +65,63 @@ namespace ArangoDbTests
             {
                 db.CreateDatabase(DatabaseName);
 
-                foreach (Type implementation in _assignableTypes)
+                RegisterTypes(db);
+            }
+        }
+        public void InsertUser(User user)
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                db.Collection<User>().Insert(user);
+            }
+        }
+        public void InsertNode(Node node)
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                db.Collection<Node>().Insert(node);
+            }
+        }
+
+
+        public void DeleteUser(User user)
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                db.Collection<User>().Remove(user);
+            }
+        }
+        public void DeleteNode(Node node)
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                db.Collection<Node>().Remove(node);
+            }
+        }
+
+        public void InsertUsers(IEnumerable<User> users)
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                var linksList = users.ToList();
+                for (var i = 0; i < linksList.Count; i += BatchSise)
                 {
-                    db.CreateCollection(implementation.Name);
+                    var batch = linksList.Skip(i).Take(BatchSise).ToList();
+                    db.Collection<User>().InsertMultiple(batch);
                 }
-               
-                db.CreateCollection(typeof(Link).Name, type: CollectionType.Edge);
             }
         }
 
-        public void InsertDocument(T document)
+        public void InsertNodes(IEnumerable<Node> nodes)
         {
             using (var db = ArangoDatabase.CreateWithSetting())
             {
-                db.Collection<T>().Insert(document);
-            }
-        }
-
-        public void InsertDocuments(IEnumerable<T> documents)
-        {
-            using (var db = ArangoDatabase.CreateWithSetting())
-            {
-                db.Collection<T>().InsertMultiple(documents.ToList());
+                var linksList = nodes.ToList();
+                for (var i = 0; i < linksList.Count; i += BatchSise)
+                {
+                    var batch = linksList.Skip(i).Take(BatchSise).ToList();
+                    db.Collection<Node>().InsertMultiple(batch);
+                }
             }
         }
 
@@ -85,7 +151,6 @@ namespace ArangoDbTests
                     var batch = linksList.Skip(i).Take(BatchSise).ToList();
                     db.Collection<Link>().InsertMultiple(batch);
                 }
-                
             }
         }
 
@@ -93,14 +158,17 @@ namespace ArangoDbTests
         {
             using (var db = ArangoDatabase.CreateWithSetting())
             {
-                EdgeDefinitionTypedData data = new EdgeDefinitionTypedData
-                {
-                    From = _assignableTypes.ToList(),
-                    To = _assignableTypes.ToList(),
-                    Collection = typeof(Link)
-                };
+                var edgeDefinitions = _edgeTypes.Select(x =>
+                        new EdgeDefinitionTypedData
+                        {
+                            From = _vertexTypes.ToList(),
+                            To = _vertexTypes.ToList(),
+                            Collection = x
+                        }
+                    )
+                    .ToList();
 
-                db.Graph(name).Create(new List<EdgeDefinitionTypedData> { data });
+                db.Graph(name).Create(edgeDefinitions);
             }
         }
     }
