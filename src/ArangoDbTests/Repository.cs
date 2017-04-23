@@ -50,6 +50,20 @@ namespace ArangoDbTests
                 RegisterTypes(db);
             }
         }
+        ///<remarks>Bugged.</remarks>
+        public List<User> GetLinkedUsers(User user,string graph)
+        {
+            using (var db = ArangoDatabase.CreateWithSetting())
+            {
+                var query = db.Query()
+                    .Traversal<User, Link>(user.GetIdentifier())
+                    .Depth(1, 1)
+                    .AnyDirection()
+                    .Graph(graph)
+                    .Select(g => g.Vertex);
+                return query.ToList();
+            }
+        }
 
         private void RegisterTypes(IArangoDatabase db)
         {
@@ -167,8 +181,10 @@ namespace ArangoDbTests
                         }
                     )
                     .ToList();
-
-                db.Graph(name).Create(edgeDefinitions);
+                if (!db.ListGraphs().Select(x => x.Id).Any())
+                {
+                    db.Graph(name).Create(edgeDefinitions);
+                }
             }
         }
     }

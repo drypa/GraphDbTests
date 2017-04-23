@@ -11,6 +11,11 @@ namespace ArangoDbTests.Models
 
         public string Name { get; set; }
 
+        public string GetIdentifier()
+        {
+            return $"{GetType().Name}/{Id}";
+        }
+
         public static User Create(string name)
         {
             return new User
